@@ -1,0 +1,37 @@
+name: Empaquetar Coqui con Modelos ES
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar e Inyectar Modelos
+        run: |
+          docker pull ghcr.io/coqui-ai/tts:latest
+          
+          # Ejecutamos todo en un solo bloque. 
+          # AGREE_TOS=1 es VITAL para que XTTS v2 no de error.
+          docker run --name tts_prep \
+            -e COQUI_TOS_AGREED=1 \
+            ghcr.io/coqui-ai/tts:latest \
+            bash -c "tts --model_name tts_models/es/css10/vits --text 'Cargando uno'; \
+                     tts --model_name tts_models/es/mai/vits --text 'Cargando dos'; \
+                     tts --model_name tts_models/multilingual/multi-dataset/xtts_v2 --text 'Cargando tres'"
+          
+          # Guardamos el estado del contenedor con los modelos ya descargados
+          docker commit tts_prep tts-es-full
+          
+          # Limpiamos el contenedor temporal para liberar espacio en el disco de GitHub
+          docker rm tts_prep
+          
+          # Creamos el archivo para el USB
+          docker save tts-es-full -o coqui_tts_es_completo.tar
+
+      - name: Subir a GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: coqui-espanol-completo
+          path: coqui_tts_es_completo.tar
+          retention-days: 1
+          
