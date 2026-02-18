@@ -1,0 +1,34 @@
+name: Empaquetar XTTS v2
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar Imagen y Modelo XTTS
+        run: |
+          # 1. Bajamos la imagen oficial
+          docker pull ghcr.io/coqui-ai/tts:latest
+          
+          # 2. Ejecutamos el comando que la imagen espera para bajar el modelo
+          # IMPORTANTE: No usamos bash, dejamos que la imagen use su propio motor
+          docker run --name tts_xtts \
+            -e COQUI_TOS_AGREED=1 \
+            ghcr.io/coqui-ai/tts:latest \
+            --model_name tts_models/multilingual/multi-dataset/xtts_v2 \
+            --text "Descargando el mejor modelo para mi Ryzen."
+
+          # 3. Guardamos el contenedor con el modelo ya dentro
+          docker commit tts_xtts coqui-xtts-v2
+          
+          # 4. Creamos el archivo .tar
+          docker save coqui-xtts-v2 -o xtts_v2_completo.tar
+
+      - name: Subir a GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: xtts-offline
+          path: xtts_v2_completo.tar
+          retention-days: 1
+          
