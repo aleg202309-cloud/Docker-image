@@ -10,19 +10,22 @@ jobs:
         run: |
           docker pull ghcr.io/coqui-ai/tts:latest
           
-          # Crear el contenedor y descargar Modelo 1
-          docker run --name tts_prep ghcr.io/coqui-ai/tts:latest --model_name tts_models/es/css10/vits --text "Primera voz lista."
+          # Ejecutamos todo en un solo bloque. 
+          # AGREE_TOS=1 es VITAL para que XTTS v2 no de error.
+          docker run --name tts_prep \
+            -e COQUI_TOS_AGREED=1 \
+            ghcr.io/coqui-ai/tts:latest \
+            bash -c "tts --model_name tts_models/es/css10/vits --text 'Cargando uno'; \
+                     tts --model_name tts_models/es/mai/vits --text 'Cargando dos'; \
+                     tts --model_name tts_models/multilingual/multi-dataset/xtts_v2 --text 'Cargando tres'"
           
-          # Descargar Modelo 2 dentro del mismo contenedor
-          docker exec tts_prep tts --model_name tts_models/es/mai/vits --text "Segunda voz lista."
-          
-          # Descargar Modelo 3 (XTTS v2)
-          docker exec tts_prep tts --model_name tts_models/multilingual/multi-dataset/xtts_v2 --text "Voz multilingüe lista."
-          
-          # Guardar los cambios en una nueva imagen
+          # Guardamos el estado del contenedor con los modelos ya descargados
           docker commit tts_prep tts-es-full
           
-          # Crear el archivo para el USB
+          # Limpiamos el contenedor temporal para liberar espacio en el disco de GitHub
+          docker rm tts_prep
+          
+          # Creamos el archivo para el USB
           docker save tts-es-full -o coqui_tts_es_completo.tar
 
       - name: Subir a GitHub
@@ -31,3 +34,4 @@ jobs:
           name: coqui-espanol-completo
           path: coqui_tts_es_completo.tar
           retention-days: 1
+          
