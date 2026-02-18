@@ -1,15 +1,33 @@
-- name: Inyectar modelos de español (VITS y CSS10)
+name: Empaquetar Coqui con Modelos ES
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar e Inyectar Modelos
         run: |
           docker pull ghcr.io/coqui-ai/tts:latest
           
-          # Modelo 1: VITS CSS10 (Voz femenina clara, excelente puntuación)
+          # Crear el contenedor y descargar Modelo 1
           docker run --name tts_prep ghcr.io/coqui-ai/tts:latest --model_name tts_models/es/css10/vits --text "Primera voz lista."
           
-          # Modelo 2: VITS Mai (Voz con entonación muy natural)
+          # Descargar Modelo 2 dentro del mismo contenedor
           docker exec tts_prep tts --model_name tts_models/es/mai/vits --text "Segunda voz lista."
           
-          # Modelo 3: Multilingüe (Permite voces más variadas)
+          # Descargar Modelo 3 (XTTS v2)
           docker exec tts_prep tts --model_name tts_models/multilingual/multi-dataset/xtts_v2 --text "Voz multilingüe lista."
           
+          # Guardar los cambios en una nueva imagen
           docker commit tts_prep tts-es-full
+          
+          # Crear el archivo para el USB
           docker save tts-es-full -o coqui_tts_es_completo.tar
+
+      - name: Subir a GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: coqui-espanol-completo
+          path: coqui_tts_es_completo.tar
+          retention-days: 1
