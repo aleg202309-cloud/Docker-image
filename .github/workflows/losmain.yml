@@ -6,9 +6,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Descargar Imagen de Fish Speech (CPU)
+      - name: Descargar Imagen de Fish Speech
         run: |
-          docker pull fishaudio/fish-speech:latest-cpu
+          # Usamos la imagen principal (que contiene las librerías necesarias)
+          docker pull fishaudio/fish-speech:latest-v1.5-gh
+          
+          # La renombramos localmente para facilitar los siguientes pasos
+          docker tag fishaudio/fish-speech:latest-v1.5-gh fish-speech-base:latest
 
       - name: Descargar Modelos de Hugging Face (V1.5)
         run: |
