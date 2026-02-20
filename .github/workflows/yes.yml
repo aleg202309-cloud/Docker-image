@@ -1,0 +1,43 @@
+name: Empaquetar Fish Speech para VM
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar Imagen Base (V1.5)
+        run: |
+          # Usamos la imagen oficial de GitHub que es la más estable
+          docker pull fishaudio/fish-speech:latest-v1.5-gh
+          docker tag fishaudio/fish-speech:latest-v1.5-gh fish-base:latest
+
+      - name: Descargar Modelos de Hugging Face
+        run: |
+          mkdir -p checkpoints/fish-speech-1.5
+          cd checkpoints/fish-speech-1.5
+          # Descargamos los pesos reales (Cerebro de la IA)
+          curl -L -o model.pth https://huggingface.co/fishaudio/fish-speech-1.5/resolve/main/model.pth
+          curl -L -o config.json https://huggingface.co/fishaudio/fish-speech-1.5/resolve/main/config.json
+          curl -L -o firefly-gan-vq-fsq-8x1024-21hz-generator.pth https://huggingface.co/fishaudio/fish-speech-1.5/resolve/main/firefly-gan-vq-fsq-8x1024-21hz-generator.pth
+
+      - name: Inyectar Modelos y Crear Imagen Offline
+        run: |
+          # Creamos un contenedor temporal
+          docker create --name temp-container fish-base:latest
+          # Copiamos la carpeta de modelos adentro
+          docker cp checkpoints temp-container:/app/
+          # Guardamos los cambios en una nueva imagen
+          docker commit temp-container fish-speech-es:ready
+          docker rm temp-container
+
+      - name: Exportar a TAR
+        run: |
+          docker save fish-speech-es:ready -o fish_speech_es.tar
+
+      - name: Subir a GitHub (Artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: fish-speech-es-bundle
+          path: fish_speech_es.tar
+          retention-days: 1
