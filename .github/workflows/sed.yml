@@ -7,14 +7,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # 1. ESTA ES LA MAGIA: Descargamos el código oficial de Fish Speech
       - name: Checkout official Fish Speech code
         uses: actions/checkout@v4
         with:
           repository: fishaudio/fish-speech
-          ref: main # O puedes poner 'v1.5.0' si prefieres esa versión exacta
+          ref: main 
 
-      # 2. Creamos el Dockerfile dentro de esa carpeta oficial
       - name: Create Dockerfile manually
         run: |
           cat <<EOF > Dockerfile.cpu
@@ -26,14 +24,10 @@ jobs:
 
           WORKDIR /app
 
-          # Copiamos todo el código oficial recién descargado al contenedor
           COPY . .
 
-          # Actualizamos pip e instalamos PyTorch
           RUN pip install --no-cache-dir --upgrade pip setuptools wheel
           RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-          
-          # Ahora sí encontrará el pyproject.toml y funcionará
           RUN pip install --no-cache-dir -e .
           
           EXPOSE 7860
