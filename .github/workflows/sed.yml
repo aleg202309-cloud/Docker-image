@@ -41,4 +41,21 @@ jobs:
           EOF
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+
+      - name: Build and export
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.cpu
+          tags: fish-speech-ready:latest
+          outputs: type=docker,dest=/tmp/fish-speech-ready.tar
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: /tmp/fish-speech-ready.tar
+          retention-days: 1
