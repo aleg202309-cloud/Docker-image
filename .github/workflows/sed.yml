@@ -10,7 +10,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ESTE ES EL PASO CLAVE: Crea un constructor que sí permite exportar el .tar
+      # ESTO CREA LA CARPETA Y EL ARCHIVO AUTOMÁTICAMENTE
+      - name: Create Dockerfile manually
+        run: |
+          mkdir -p docker
+          cat <<EOF > docker/Dockerfile.cpu
+          FROM python:3.12-slim
+          RUN apt-get update && apt-get install -y build-essential cmake git libsox-dev && rm -rf /var/lib/apt/lists/*
+          WORKDIR /app
+          COPY . .
+          RUN pip install --no-cache-dir --default-timeout=100 -e .
+          RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+          EXPOSE 7860
+          CMD ["python", "tools/run_webui.py"]
+          EOF
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
@@ -22,7 +36,6 @@ jobs:
           context: .
           file: docker/Dockerfile.cpu
           tags: fish-speech-ready:latest
-          # Ahora el driver docker-container sí entenderá esto
           outputs: type=docker,dest=/tmp/fish-speech-ready.tar
 
       - name: Upload artifact
@@ -30,4 +43,4 @@ jobs:
         with:
           name: docker-image
           path: /tmp/fish-speech-ready.tar
-          retention-days: 1 # Para no gastar espacio en tu cuenta
+          retention-days: 1
