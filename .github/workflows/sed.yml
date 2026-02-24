@@ -7,56 +7,44 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # 1. DESCARGA EL CÓDIGO REAL: Traemos los archivos de Fish Speech al servidor de GitHub
-      - name: Checkout official Fish Speech code
-        uses: actions/checkout@v4
-        with:
-          repository: fishaudio/fish-speech
-          ref: main 
-
-      # 2. CREA EL DOCKERFILE: Ahora que ya están los archivos ahí, creamos la receta
       - name: Create Dockerfile manually
         run: |
           cat <<EOF > Dockerfile.cpu
           FROM python:3.12-slim
           
-          # Instalamos dependencias de sistema necesarias para compilar
+          # 1. Instalamos herramientas básicas (incluyendo git)
           RUN apt-get update && apt-get install -y \
               build-essential cmake git libsox-dev ffmpeg libavdevice-dev \
               && rm -rf /var/lib/apt/lists/*
 
           WORKDIR /app
 
-          # Copiamos el código oficial que descargamos en el paso 1
-          COPY . .
+          # 2. DESCARGAMOS EL CÓDIGO DIRECTAMENTE AQUÍ (Esto soluciona tu error)
+          RUN git clone https://github.com/fishaudio/fish-speech.git .
 
-          # Actualizamos pip e instalamos las librerías pesadas
+          # 3. Preparamos Python y PyTorch
           RUN pip install --no-cache-dir --upgrade pip setuptools wheel
           RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
           
-          # Ahora sí encontrará el pyproject.toml porque ya copiamos el código real
+          # 4. Instalamos el proyecto (ahora sí encontrará los archivos)
           RUN pip install --no-cache-dir -e .
           
           EXPOSE 7860
           CMD ["python", "tools/run_webui.py"]
           EOF
 
-      # 3. PREPARA EL MOTOR DE DOCKER (Corregido el error del @v3)
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          driver: docker-container
 
-      # 4. CONSTRUYE Y EXPORTA A UN ARCHIVO .TAR
       - name: Build and export
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile.cpu
           tags: fish-speech-ready:latest
+          # Usamos este formato para asegurar la compatibilidad del archivo .tar
           outputs: type=docker,dest=/tmp/fish-speech-ready.tar
 
-      # 5. SUBE EL ARCHIVO PARA QUE LO DESCARGUES
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
