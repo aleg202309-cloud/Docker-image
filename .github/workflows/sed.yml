@@ -7,50 +7,38 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      # 1. ESTA ES LA MAGIA: Descargamos el código oficial de Fish Speech
+      - name: Checkout official Fish Speech code
         uses: actions/checkout@v4
+        with:
+          repository: fishaudio/fish-speech
+          ref: main # O puedes poner 'v1.5.0' si prefieres esa versión exacta
 
+      # 2. Creamos el Dockerfile dentro de esa carpeta oficial
       - name: Create Dockerfile manually
         run: |
           cat <<EOF > Dockerfile.cpu
           FROM python:3.12-slim
           
-          # 1. Instalar dependencias del sistema
           RUN apt-get update && apt-get install -y \
               build-essential cmake git libsox-dev ffmpeg libavdevice-dev \
               && rm -rf /var/lib/apt/lists/*
 
           WORKDIR /app
 
-          # 2. Actualizar pip y setuptools (Vital para evitar el Error 1)
-          RUN pip install --no-cache-dir --upgrade pip setuptools wheel
-
-          # 3. Instalar PyTorch primero (la parte más pesada)
-          RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-
-          # 4. Copiar solo los archivos de requerimientos primero para cachear
+          # Copiamos todo el código oficial recién descargado al contenedor
           COPY . .
 
-          # 5. Instalar el proyecto (intentando ignorar errores de dependencias conflictivas)
-          RUN pip install --no-cache-dir -e . || pip install --no-cache-dir -r requirements.txt
+          # Actualizamos pip e instalamos PyTorch
+          RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+          RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+          
+          # Ahora sí encontrará el pyproject.toml y funcionará
+          RUN pip install --no-cache-dir -e .
           
           EXPOSE 7860
           CMD ["python", "tools/run_webui.py"]
           EOF
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and export
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile.cpu
-          tags: fish-speech-ready:latest
-          outputs: type=docker,dest=/tmp/fish-speech-ready.tar
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-image
-          path: /tmp/fish-speech-ready.tar
+        uses: docker/setup-buildx-action@
