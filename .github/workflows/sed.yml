@@ -1,7 +1,7 @@
 name: Build Docker Image
 
 on:
-  workflow_dispatch: # Permite darle al botón "Play" manualmente
+  workflow_dispatch:
 
 jobs:
   build:
@@ -10,8 +10,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # ESTE ES EL PASO CLAVE: Crea un constructor que sí permite exportar el .tar
       - name: Set up Docker Buildx
-        uses: actions/checkout@v4
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
 
       - name: Build and export
         uses: docker/build-push-action@v5
@@ -19,6 +22,7 @@ jobs:
           context: .
           file: docker/Dockerfile.cpu
           tags: fish-speech-ready:latest
+          # Ahora el driver docker-container sí entenderá esto
           outputs: type=docker,dest=/tmp/fish-speech-ready.tar
 
       - name: Upload artifact
@@ -26,3 +30,4 @@ jobs:
         with:
           name: docker-image
           path: /tmp/fish-speech-ready.tar
+          retention-days: 1 # Para no gastar espacio en tu cuenta
