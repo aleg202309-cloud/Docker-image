@@ -1,0 +1,18 @@
+name: Archivo IA - Pack Offline
+on: [push]
+
+jobs:
+  build:
+    runs-on: windows-latest  # Importante: Que coincida con tu PC
+    steps:
+      - uses: actions/checkout@v4
+      - name: Descargar Wheels
+        run: |
+          mkdir offline_packages
+          pip download -r requirements.txt -d offline_packages
+      - name: Subir Paquete
+        uses: actions/upload-artifact@v4
+        with:
+          name: librerias-ia
+          path: offline_packages/
+          
