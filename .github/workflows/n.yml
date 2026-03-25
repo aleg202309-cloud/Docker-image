@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # El "Cerebro" de AMANDA
+  letta-server:
+    image: letta/letta:latest
+    container_name: letta_server
+    ports:
+      - "8083:8083"
+    environment:
+      - LETTA_ENVIRONMENT=production
+      - POSTGRES_URL=postgresql://letta:amanda123@db:5432/letta
+      - CHROMA_SERVER_HOST=chroma
+      - CHROMA_SERVER_HTTP_PORT=8000
+    volumes:
+      - ./letta_data:/root/.letta
+    depends_on:
+      - db
+      - chroma
+
+  # La "Memoria de Datos Exactos" (SQL)
+  db:
+    image: postgres:16-alpine
+    container_name: letta_db
+    environment:
+      POSTGRES_USER: letta
+      POSTGRES_PASSWORD: amanda123
+      POSTGRES_DB: letta
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+
+  # La "Memoria Semántica" (Vectores)
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: letta_chroma
+    volumes:
+      - ./chroma_data:/chroma/data
+
+  # El "Procesador" (LLM)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama_local
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama_data:/root/.ollama
